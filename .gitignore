@@ -1,0 +1,41 @@
+# Environment
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Cursor / local AI context (not published)
+.cursor/
+memory-bank/
+
+# Kaggle data & derived (large; download after clone — see README)
+data/*.csv
+data/processed/
+*.parquet
+
+# Models & intermediate outputs (regenerate via notebooks)
+artifacts/*.pkl
+artifacts/*.joblib
+artifacts/*.txt
+artifacts/*.csv
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+.env
+.env.local
