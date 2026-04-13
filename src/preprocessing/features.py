@@ -4,10 +4,37 @@ from datetime import timedelta
 from pathlib import Path
 
 
+def _insert_christmas_gaps(df: pd.DataFrame) -> pd.DataFrame:
+    """Match `02_feature_engineering`: missing 25 Dec rows → sales=0 for lag continuity."""
+    christmas_dates = pd.to_datetime(
+        ["2013-12-25", "2014-12-25", "2015-12-25", "2016-12-25"]
+    )
+    existing_dates = df["date"].unique()
+    missing_xmas = [d for d in christmas_dates if d not in existing_dates]
+    if not missing_xmas:
+        return df
+    store_family = df[["store_nbr", "family"]].drop_duplicates()
+    rows = []
+    for d in missing_xmas:
+        chunk = store_family.copy()
+        chunk["date"] = d
+        chunk["sales"] = 0.0
+        chunk["onpromotion"] = 0
+        rows.append(chunk)
+    xmas_df = pd.concat(rows, ignore_index=True)
+    out = pd.concat([df, xmas_df], ignore_index=True)
+    return out.sort_values(["store_nbr", "family", "date"]).reset_index(drop=True)
+
+
 class HistoricalData:
     """Sales & promo history per (store_nbr, family) for lag/rolling computation."""
 
-    def __init__(self, train_path: Path):
+    def __init__(
+        self,
+        train_path: Path,
+        max_date: pd.Timestamp | str | None = None,
+    ):
+        """max_date: если задан — только строки с date <= max_date (для рекурсивной валидации val)."""
         print(f"  Loading train.csv for historical data...")
         df = pd.read_csv(
             train_path,
@@ -15,7 +42,12 @@ class HistoricalData:
             usecols=["date", "store_nbr", "family", "sales", "onpromotion"],
             dtype={"store_nbr": "int16", "onpromotion": "int16"},
         )
+        df = _insert_christmas_gaps(df)
         df = df.sort_values(["store_nbr", "family", "date"])
+        if max_date is not None:
+            md = pd.Timestamp(max_date).normalize()
+            df = df.loc[df["date"] <= md].copy()
+            print(f"  Truncated to date <= {md.date()} ({len(df):,} rows)")
 
         self._sales: dict[tuple[int, str], pd.Series] = {}
         self._promo: dict[tuple[int, str], pd.Series] = {}
@@ -26,6 +58,26 @@ class HistoricalData:
             self._promo[(int(snbr), fam)] = indexed["onpromotion"]
 
         print(f"  Loaded {len(self._sales)} time series")
+
+    def record_observation(
+        self,
+        store_nbr: int,
+        family: str,
+        date: pd.Timestamp,
+        sales: float,
+        onpromotion: int,
+    ) -> None:
+        """Append one day (e.g. recursive test forecast) so lags/rolling stay causal."""
+        key = (store_nbr, family)
+        d = pd.Timestamp(date).normalize()
+        if key not in self._sales:
+            self._sales[key] = pd.Series(dtype=float)
+        if key not in self._promo:
+            self._promo[key] = pd.Series(dtype=float)
+        self._sales[key].loc[d] = float(sales)
+        self._sales[key] = self._sales[key].sort_index()
+        self._promo[key].loc[d] = int(onpromotion)
+        self._promo[key] = self._promo[key].sort_index()
 
     def get_lag(self, store_nbr: int, family: str, date: pd.Timestamp, lag_days: int) -> float:
         series = self._sales.get((store_nbr, family))

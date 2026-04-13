@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Kaggle CSV и артефакты обучения — с хоста (не в git)
+      - ./data:/app/data:ro
+      - ./artifacts:/app/artifacts:ro
+    restart: unless-stopped

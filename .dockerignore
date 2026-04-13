@@ -1,0 +1,14 @@
+venv/
+.venv/
+.git/
+notebooks/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.cursor/
+memory-bank/
+data/
+artifacts/
+*.parquet
+submissions/
+*.ipynb
