@@ -20,11 +20,11 @@ FastAPI, Docker и разбор расхождения между тем, как
 
 ```mermaid
 flowchart LR
-    A[train.csv / stores.csv / oil.csv / holidays_events.csv] --> B[HistoricalData + registries]
-    B --> C[compute_features()]
-    C --> D[LightGBM predictor]
-    D --> E[FastAPI]
-    E --> F[Streamlit / CLI clients]
+    A["CSV: train, stores, oil, holidays"] --> B["HistoricalData + registries"]
+    B --> C["compute_features"]
+    C --> D["LightGBM"]
+    D --> E["FastAPI"]
+    E --> F["Streamlit / CLI"]
 ```
 
 
